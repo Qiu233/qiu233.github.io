@@ -1,7 +1,7 @@
 ---
 title: Monad是什么
 date: 2024-02-18 01:58:40
-tags: [math, Haskell, Monad]
+tags: [math, Haskell, Monad, FP]
 ---
 ~~Monad是自函子范畴上的幺半群~~。
 
@@ -182,12 +182,12 @@ func = do
 ## Monad
 上一节详细介绍了IO这个Monad，但除了IO之外还有很多Monad，例如Maybe，例如List。这一节我们先不管每个不同Monad的细节，而暂时关注抽象的Monad。
 
-*note: 类似于数学中整数加法也构成一个群，但仍然可以先研究抽象的群，得到它的一般性质。*
+注意！当我们提到*Monad*一词时，实际上是在讨论一系列具有类似性质的(高阶)类型，而不是某个具体的类型。当然Monad本身在Haskell里是一个class。
 
-### 每一个Monad都是高阶类型
+### Monad都是高阶类型
+Haskell中的`Int`、`String`等等完整的类型叫做普通类型(proper types)，写作`Type`或`*`，高阶类型指的是类似`Maybe`、`IO`这种需要类型参数来构成完整普通类型的类型。  
+例如上文我们提到了`IO Int`是一个类型，实际上说的是它是一个proper type，但是单独一个`IO`却不是，它的阶签名是`Type -> Type`，高阶类型可以更复杂，例如`Either`是`Type -> Type -> Type`。
 
-还记得上面提到的`IO ()`和`IO Int`类型吗？现在我们都知道`IO`是一个Monad了，那么`IO`是一个类型吗？答案是否定的。  
-Haskell的类型写作`Type`，也写作`*`，表示的是所有"普通类型"(~~准确来说是所有无参数的type constructor~~)，例如说`Int`就是一个类型，例如说`IO Int`也是一个类型，甚至`IO (IO Int)`也是一个类型。  
-那么`IO`为什么不是类型？它其实是一个高阶类型：`Type -> Type`，或者也可以写成`* -> *`。它可以看作从类型到类型的函数，我们把`Int`传入，得到的`IO Int`自然就是类型。
+**所有Monad都是一个参数的高阶类型`Type -> Type`。**
 
 *施工中*
