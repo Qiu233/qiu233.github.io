@@ -13,7 +13,7 @@ Lean4的类型的层次结构是`Sort 0 : Sort 1 : Sort 2 : ...`，其中`Sort 0
 上面`Sort n`中的自然数n表示不同的universe，"普通的"类型比如Nat就落在`Sort 1`也就是`Type`当中，而`Prop`作为最低的Sort，有两个重要性质：  
 1. `Prop : Type`意味着Prop和Nat等"普通"类型一样可以在同一个universe中讨论
 2. 相比于"普通"类型，Prop仍然是一个Sort，意味着在其universe下可以构造新类型，例如下面的代码
-```lean
+```Haskell
 inductive Or (a b : Prop) : Prop where
 | inl (h : a) : Or a b
 | inr (h : b) : Or a b
@@ -23,7 +23,7 @@ inductive Or (a b : Prop) : Prop where
 # 自然推演系统
 自然推演系统(Natural Deduction)是一个证明演算(proof calculus)系统，是lean4的基础，同样采用自然推演系统的还有Coq。简单来说有三种形式化的推理规则：
 
-## 1.Formation Rules
+## Formation Rules
 Formation Rules用于构造有效的term，在proof assistant中复杂一些，由语法结构和类型、运算等定义直接规定。
 
 以$\neg$为例，在lean4中由两部分组成：
@@ -31,31 +31,46 @@ Formation Rules用于构造有效的term，在proof assistant中复杂一些，�
 2. 实际类型定义，此处是Not，代码如下`def Not (a : Prop) : Prop := a → False`
 
 再以加法运算为例，符号定义是``macro_rules | `($x + $y)   => `(binop% HAdd.hAdd $x $y)``，hAdd的定义则是
-```lean
+```Haskell
 class HAdd (α : Type u) (β : Type v) (γ : outParam (Type w)) where
   hAdd : α → β → γ
 ```
 
 *lean4对于一般的term的formation rules没有统一的语法来描述。*
 
-## 2.Introduction Rules
-Introduction Rules用于构造类型，除了∀类型的之外全都可认为是constructor，例如∃类型的定义如下
-```lean
+## Introduction Rules
+Introduction Rules用于构造类型，除了∀类型(Π type)的之外全都可认为是constructor，例如∃类型的定义如下
+```Haskell
 inductive Exists {α : Sort u} (p : α → Prop) : Prop where
 | intro (w : α) (h : p w) : Exists p
 ```
 
-## 3.Elimination Rules
-与Introduction Rules刚好相反，Elimination Rules用于"拆解"类型，或者说指出了类型要如何被"使用"，在lean4中通常是定理的形式，还是以∃类型为例
-```lean
+## Elimination Rules
+与Introduction Rules刚好相反，Elimination Rules用于"拆解"类型，或者说指出了类型要如何被"消费"，在lean4中通常是定理的形式，还是以∃类型为例
+```Haskell
 theorem Exists.elim {α : Sort u} {p : α → Prop} {b : Prop}
    (h₁ : Exists (fun x => p x)) (h₂ : ∀ (a : α), p a → b) : b :=
   match h₁ with
   | intro a h => h₂ a h
 ```
 
-## ∀类型和函数类型
-∀类型和函数类型在某种程度上是等价的
+## Propositions as Types
+Curry–Howard correspondence是机器证明领域最重要的内容之一，具体到lean4则是其中的直觉主义自然推演系统(Intuitionistic Natural deduction)和类型化λ演算(typed lambda calculus)之间的对应关系。
 
-# Propositions as Types
-待补充
+总结起来就是一句话：**每一个逻辑命题都对应到程序中的一个类型**。基于此，请务必理解下面几个点：
+* 对命题的证明=对应类型的值的构造。构造完成即证明结束。
+* 命题的可证明与否=对应类型是否有值。
+* 引入公理=假设对应类型的值存在。公理用于证明=假设存在的值参与构造目标值。
+* 前文所述的Introduction Rules和Elimination Rules也是从逻辑规则到程序的对应关系。
+
+## 函数类型、蕴含连词和Π Type
+lean4中箭头符号`→`有三种内涵一致的解释：
+1. 从程序的角度来说，形如`X → Y`表示从类型`X`映射到类型`Y`的函数类型。  
+2. 从逻辑的角度来说，假如`X`和`Y`是`Prop`，`X → Y`中的符号`→`可以解释为蕴含连词。  
+3. 从类型的角度来说，假设`P`是一个`X → Prop`，那么类型`∀ x : X, P x`是函数类型`(x : X) → P x`的别名。*这里出现的类型在dependent type理论中叫做Π type或者pi-type。*
+
+实际上3就是∀量词的本质——即Π类型，这也是∀类型没有语言中定义的Introduction/Elimination Rules的原因——符号`→`的语义是语言内置的。  
+既已清楚3可以归结到1，重要的是1和2要如何统一起来。答案十分简单，根据上一节的内容，若`X`和`Y`都是`Prop`：  
+假设类型为`f : (X → Y)`的函数存在；假设命题`X`可证，即值`x : X`存在，那么`f x : Y`即是命题`Y`的证明，因此命题`X → Y`得证。也就是说在1的基础上2的解释成立。
+
+*施工中*
