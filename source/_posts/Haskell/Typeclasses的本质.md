@@ -1,5 +1,5 @@
 ---
-title: Typeclasses本质上是什么
+title: Typeclasses的本质
 date: 2024-02-21 21:23:57
 tags: [Haskell, Typeclasses, FP, Lean4]
 ---
@@ -47,7 +47,7 @@ Haskell中程序员不能直接干涉这个机制，在Lean4中所谓类型约�
 # 和Java的class相比
 Haskell的class存在继承关系，例如说Monad就是Applicative的子类型，你可能很自然想到class的继承可以直接由data的继承关系得到，但很可惜Haskell的data并不支持继承。
 
-另外，Java中也有class和继承的概念，且Haskell的class的值和它们一样叫**实例(instance)**，你可能会想把它们和Haskell统一到一个框架内。我这里断言：两者完全不是一回事。
+另外，Java中也有class和继承的概念，且Haskell的class的值和它们一样叫**实例(instance)**，你可能会想把它们和Haskell统一到一个框架内。这里给出回答：两者完全不是一回事。
 * Java的class是OOP的概念，含义接近于"表示一类具体事物或概念"，可以实例化并且在代码中直接操作，继承是对这一"事物"或"概念"的进一步具体化。
 * 而Haskell的class描述的是性质，顾名思义是对类型的分类(type class)，它的实例化不由可执行代码完成，class的实例也不能由程序员直接操作，仅在类型层面发挥作用。
 
