@@ -39,11 +39,12 @@ class HAdd (α : Type u) (β : Type v) (γ : outParam (Type w)) where
 *lean4对于一般的term的formation rules没有统一的语法来描述。*
 
 ## Introduction Rules
-Introduction Rules用于构造类型，除了∀类型(Π type)的之外全都可认为是constructor，例如∃类型的定义如下
+Introduction Rules用于构造类型，除了∀类型(Π type)的之外全都可认为是constructor，例如∃类型(Σ类型)的定义如下
 ```Haskell
 inductive Exists {α : Sort u} (p : α → Prop) : Prop where
 | intro (w : α) (h : p w) : Exists p
 ```
+*Σ类型也叫dependent pair，具体来说是这里的w和h构成的pair，因为h的类型依赖于w的值故得名dependent pair，具体请查阅dependent type相关资料。*
 
 ## Elimination Rules
 与Introduction Rules刚好相反，Elimination Rules用于"拆解"类型，或者说指出了类型要如何被"消费"，在lean4中通常是定理的形式，还是以∃类型为例
@@ -63,14 +64,20 @@ Curry–Howard correspondence是机器证明领域最重要的内容之一，具
 * 引入公理=假设对应类型的值存在。公理用于证明=假设存在的值参与构造目标值。
 * 前文所述的Introduction Rules和Elimination Rules也是从逻辑规则到程序的对应关系。
 
-## 函数类型、蕴含连词和Π Type
-lean4中箭头符号`→`有三种内涵一致的解释：
+*这一小节的内容有点抽象，因此我安排了下一小节作为重要例子。*
+
+## 蕴含连词和Π Type
+lean4中箭头符号`→`有三种重要的解释：
 1. 从程序的角度来说，形如`X → Y`表示从类型`X`映射到类型`Y`的函数类型。  
 2. 从逻辑的角度来说，假如`X`和`Y`是`Prop`，`X → Y`中的符号`→`可以解释为蕴含连词。  
-3. 从类型的角度来说，假设`P`是一个`X → Prop`，那么类型`∀ x : X, P x`是函数类型`(x : X) → P x`的别名。*这里出现的类型在dependent type理论中叫做Π type或者pi-type。*
+3. 从类型的角度来说，假设`P`是一个`X → Prop`，那么类型`∀ x : X, P x`是函数类型`(x : X) → P x`的别名。*这里出现的类型在dependent type理论中叫做Π type或者pi-type或dependent function。*
 
-实际上3就是∀量词的本质——即Π类型，这也是∀类型没有语言中定义的Introduction/Elimination Rules的原因——符号`→`的语义是语言内置的。  
-既已清楚3可以归结到1，重要的是1和2要如何统一起来。答案十分简单，根据上一节的内容，若`X`和`Y`都是`Prop`：  
+实际上3就是∀量词的本质——即Π类型，这也是∀类型没有语言中定义的Introduction/Elimination Rules的原因——符号`→`的解释是语言内置的。  
+既已清楚3可以归结到1，重要的是1和2要如何统一起来。答案十分简单，根据上一小节的内容，若`X`和`Y`都是`Prop`：  
 假设类型为`f : (X → Y)`的函数存在；假设命题`X`可证，即值`x : X`存在，那么`f x : Y`即是命题`Y`的证明，因此命题`X → Y`得证。也就是说在1的基础上2的解释成立。
+
+至此，∀量词和蕴含连词都归结到函数类型`X → Y`上。函数类型是lean4中最基础最原始的类型，它的Introduction rules和Elimination Rules分别是
+
+$${\displaystyle {\cfrac {\begin{matrix}{\cfrac {}{x : X}}\\\vdots \\ y : Y\end{matrix}}{f : X\rightarrow Y}}\ \qquad {\cfrac {f : X\rightarrow Y\quad x : X}{y : Y}}}$$
 
 *施工中*
