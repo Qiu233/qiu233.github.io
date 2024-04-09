@@ -1,11 +1,9 @@
 ---
-title: OSCamp Day 1-Rustlings
+title: OSCamp D1-Rustlings
 date: 2024-04-09 04:57:27
 tags: [Rust, OSCamp]
 category: [trace]
 ---
-
-这是参加清华大学2024年春夏季开源操作系统训练营的系列记录的第一篇。
 
 今天的课程因为官网炸了导致无法进行，所以我就按照自己的进度来了。
 
