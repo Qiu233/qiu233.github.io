@@ -295,9 +295,7 @@ uint32_t reset_vec[10] = {
 
 
 ## 5.RISC-V中的SBI的含义和功能是啥？
-SBI全称为Supervisor Binary Interface，规定了一套接口，它的实现叫做SEE(Supervisor Execution Environment)。
-
-SBI的目的是在OS和硬件之间引入一层抽象，以便OS实现能在不改动或少量改动的情况下迁移到其他硬件环境，提供的功能主要与硬件相关，例如关机、屏幕输出、设置timer等。
+SBI全称为Supervisor Binary Interface，规定了一套和SEE交互的接口。SBI的目的是在OS和硬件之间引入一层抽象，以便OS实现能在不改动或少量改动的情况下迁移到其他硬件环境，提供的功能主要与硬件相关，例如关机、屏幕输出、设置timer等。
 
 ## 6.为了让应用程序能在计算机上执行，操作系统与编译器之间需要达成哪些协议？
 

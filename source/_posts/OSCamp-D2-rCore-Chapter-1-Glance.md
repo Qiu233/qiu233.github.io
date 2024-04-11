@@ -37,9 +37,9 @@ RISC-V的启动分成三个阶段：
 * U-Mode的ECALL实际上是syscall
 * S-Mode的ECALL是对SEE的调用
 
-注意到上面原文中的execution environment一词，SEE(Supervisor Execution Environment)指的就是bootloader提供给(S-Mode)内核的一套基础功能，这套功能的规范叫做SBI(Supervisor Binary Interface)，SBI的实现叫作SEE，教程中的sbi-rt就是一个SEE。
+注意到上面原文中的execution environment一词，SEE(Supervisor Execution Environment)指的就是bootloader提供给(S-Mode)内核的一套基础功能，与这套功能交互的接口叫做SBI(Supervisor Binary Interface)，教程中的sbi-rt就是一个SBI的实现。
 
-要注意的是x86进入保护模式后所有bios中断程序都不能再使用，但是RISC-V仍然能从S-Mode用ecall使用M-Mode的功能。
+要注意的是x86进入保护模式后所有bios中断程序都不能再使用，但是RISC-V仍然能从S-Mode用ecall调用M-Mode的功能。
 
 ## 二进制格式
 section的作用分别如下：
