@@ -338,6 +338,93 @@ ret
 
 如果能确保所有函数都有如上形式，那么调试器能从第一条指令的操作数中读出栈帧的总长度。但如果不能确保这一点，那么编译器必须提供每个函数的栈帧总长度，调试器仍然可以根据pc确认函数执行的位置来计算栈帧。
 
-还有一种特殊情况，例如C语言的variable-length array可以在栈上分配运行时确定长度的数组，我在x86下反编译确认过：即便编译时带参数`-fomit-frame-pointer`，生成的汇编代码也会使用`rbp`保存frame pointer。所以这种情况下调试器无法用上述的方法(否则等于解决了停机问题)，只能通过保存fp的寄存器找到上一个栈帧。
+还有一种特殊情况，例如C语言的variable-length array可以在栈上分配运行时确定长度的数组，我通过反编译发现即便编译时带参数`-fomit-frame-pointer`，x86下生成的汇编代码也会使用`rbp`保存frame pointer。而网站[https://godbolt.org/](https://godbolt.org/)反汇编得到的RISC-V结果似乎把fp(即s0)当成通用寄存器使用，所以这个特殊情况似乎在不同平台上表现不同，我暂时得不出确定性的结论。
 
-_未完_
+# 实验练习
+题目太长就不在此转述了，请见原文。
+
+因为课程的语言是Rust，log crate已经解决了彩色输出问题，所以这道题我只关注这个要求，同时这也是我觉得第一章最有趣的部分：
+
+> challenge: 支持多核，实现多个核的 boot。
+
+思路如下：
+
+* QEMU的`-SMP`参数指定核心总数，默认为一，所以要在Makefile里面把-SMP设置为2或者更大的数。
+* 机器(QEMU)启动时只有一个hart，称为booting hart，我们要在代码里自己启动其他hart，另外注意booting hart的hartid不一定为0，我被这个问题折磨了好久才发现。
+* 在`rust_main`函数入口处保存hartid(在a0中)到局部变量，然后在`clearbss();`之后保存到全局变量，我用的是`BOOT_HART`。要注意顺序很重要，因为`clearbss();`会把初值为0和未初始化的全局变量全部清除。
+* 然后从0开始遍历一小段hartid，跳过和`BOOT_HART`相等的值，分别调用`sbi_rt::hart_start(hartid, thread_entry, opaque)`并检查返回值，在第一次成功时跳出循环。我的实验只额外创建了一个hart，如果你需要更多hart的话可以写自己的逻辑。
+
+## 实现
+
+首先要找到一个可用的hartid，我找了很多资料也没有找到能在运行时探测可用hartid的方法，或者应该说是implementation-specific的，所以目前我是直接遍历一小段hartid，在QEMU下没有遇到问题。其中用到的全局变量`BOOT_HART`在前文描述思路时已经说过了，比较trivial所以代码就不放了。
+
+```Rust
+fn start_one_hart() {
+    extern "C" {
+        fn thread_1_entry();
+    }
+    unsafe {
+        for i in 0..10 { // find the first available hartid
+            if i == BOOT_HART {
+                continue;
+            }
+            let result: sbi_rt::SbiRet = sbi_rt::hart_start(i as usize, thread_1_entry as usize, 0);
+            if result.is_ok() {
+                info!("[kernel] Successfully started hart #{:x}H.", i);
+                break;
+            } else {
+                error!("[kernel] Failed to started hart #{:x}H: err= {}", i, result.error as isize)
+            }
+        }
+    }
+}
+```
+
+
+其他hart和booting hart一样，都需要栈空间，而且每个hart的栈空间相互独立。栈的初始化和kernel的入口点一样`la sp, thread_stack_top`即可，栈空间可以分配在`entry.asm`的`boot_stack_top`附近，即在原来的boot_stack前或后加入这段代码：
+
+```
+    .globl thread_1_stack_lower_bound
+thread_1_stack_lower_bound:
+    .space 4096 * 16
+    .globl thread_1_stack_top
+thread_1_stack_top:
+```
+
+`hart_start`函数的第二个参数指定启动的hart跳转到的地址，**不要跳转到Rust的函数**，因为`#[naked]`特性目前还是用不了。我建议跳转到`entry.asm`的新加入的.text段中的函数，设置好`sp`，然后立即用`call`跳转到Rust函数：
+
+```
+    .text
+    ...
+    # thread 1 entry point
+    .global thread_1_entry
+thread_1_entry:
+    la sp, thread_1_stack_top
+    call thread_1_main
+```
+
+如果按照这个步骤来做，那么跳回的Rust函数的第一、二个参数分别就是hartid和前面传入的opaque参数，不过这里因为没有用到所以注释掉了：
+
+```Rust
+// jump from function `thread_1_entry` in entry.asm
+#[no_mangle]
+fn thread_1_main(hartid: usize/*, opaque: usize*/) -> ! {
+    info!("[kernel] Running from another thread, hartid = {}", hartid);
+    loop {}
+}
+```
+
+可以看到用`info!`输出了被启动的hart的hartid，但如果不加锁的话输出会乱序，所以将`console.rs`文件的`print`函数改为：
+
+```Rust
+// src/console.rs
+use core::sync::atomic::{AtomicU32, Ordering};
+...
+static STDOUT_LOCK: AtomicU32 = AtomicU32::new(0);
+...
+pub fn print(args: fmt::Arguments) {
+    while let Err(_) = STDOUT_LOCK.compare_exchange(0, 1, Ordering::AcqRel, Ordering::Acquire) {}
+    Stdout.write_fmt(args).unwrap();
+    STDOUT_LOCK.store(0, Ordering::Release);
+}
+```
