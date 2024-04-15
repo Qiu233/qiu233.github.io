@@ -1,7 +1,7 @@
 ---
 title: OSCamp D2-rCore Chapter 1-Glance
 date: 2024-04-10 02:54:10
-tags: [Rust, OSCamp]
+tags: [Rust, OSCamp, RISC-V]
 category: [trace]
 ---
 
