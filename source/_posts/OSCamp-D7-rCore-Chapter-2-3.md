@@ -1,8 +1,8 @@
 ---
 title: OSCamp D7-rCore-Chapter 2&3
 date: 2024-04-14 09:43:47
-tags: [Rust, OSCamp, RISC-V]
-category: [trace]
+tags: [Rust, RISC-V]
+category: [OSCamp]
 ---
 之前错把22年的资料拿来学了，这里开始回到2024S的主线。
 

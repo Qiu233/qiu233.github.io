@@ -1,8 +1,8 @@
 ---
 title: OSCamp D1-Rustlings
 date: 2024-04-09 04:57:27
-tags: [Rust, OSCamp]
-category: [trace]
+tags: [Rust, RISC-V]
+category: [OSCamp]
 ---
 
 今天的课程因为官网炸了导致无法进行，所以我就按照自己的进度来了。

@@ -1,12 +1,12 @@
 ---
 title: OSCamp D8-rCore-Chapter-4-Address Translation
 date: 2024-04-15 14:23:31
-tags: [Rust, OSCamp, RISC-V]
-category: [trace]
+tags: [Rust, RISC-V]
+category: [OSCamp]
 ---
 
 # 地址转换
-下面这张图(Sv39)去掉了权限等等细节，只保留了地址转换的大框架。本节内容围绕这张图展开。
+今天花了不少时间读spec，然后做了下面这张图(Sv39)。其中去掉了权限等等细节，只保留了地址转换的大框架。本节内容围绕这张图展开。
 
 {% asset_img sv39.png Sv39 %}
 

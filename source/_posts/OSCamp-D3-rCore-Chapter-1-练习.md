@@ -1,9 +1,11 @@
 ---
 title: OSCamp D3-rCore-Chapter-1-练习
 date: 2024-04-11 03:48:00
-tags: [Rust, OSCamp, Quiz, RISC-V]
-category: [trace]
+tags: [Rust, RISC-V]
+category: [OSCamp]
 ---
+
+
 # 编程题
 
 ## 练习1
