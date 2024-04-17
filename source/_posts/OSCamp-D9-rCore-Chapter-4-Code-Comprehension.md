@@ -44,7 +44,7 @@ Identity Mappings指的是直接把VP映射到相同的PP。注意到图中左�
 * Physical Space Range：从`ekernel`开始直到`0x88000000`的空间，可以被分配和管理的空间。
 
 
-## 内存分配
+## 特殊的地址空间
 注意图中天蓝色和灰色区域。
 
 * 灰色区域：没有映射到物理地址的虚拟地址空间，如果被访问将会触发著名的Segmentation Fault。
@@ -79,11 +79,11 @@ Identity Mappings指的是直接把VP映射到相同的PP。注意到图中左�
 
 `MemorySet`表示一个完整的地址空间，每个进程都有独立的`MemorySet`，内核有唯一一个全局的`KERNEL_SPACE`。
 
-接下来我们只关注进程的`MemorySet`，请读者注意：进程的`MemorySet`对进程本身不可见，它分配在内核的Heap上，只对内核可见。内核管理进程的内存必须切换到内核态和内核空间中。
+注意：进程的`MemorySet`对进程本身不可见，它分配在内核的Heap上，只对内核可见。内核管理进程的内存必须切换到内核态和内核空间中。
 
-* `MemorySet`持有一个`PageTable`，页表树的非叶子节点都在此处。
-* 叶子节点，即最"普通"的Frame，在更下一层的结构`MapArea`中。
-* **Identity Mappings没有Frame会被持有。**
+* `MemorySet`持有一个`PageTable`，保存页表树节点的Frame都在此处。
+* 除此之外的，即最"普通"的Frame，在更下一层的结构`MapArea`中。
+* **Identity Mappings没有Frame会被持有，因此也没有回收。**
 
 `MemorySet`持有一个`MapArea`列表，一个`MapArea`表示地址空间中一段连续的、**具有相同性质**的多个VP。例如代码和数据就应当分属不同的`MapArea`，因为代码可执行，而数据一般不可执行。
 
