@@ -1,5 +1,5 @@
 ---
-title: OSCamp D7-rCore-Chapter 2&3
+title: OSCamp D7-rCore Chapter 2&3
 date: 2024-04-14 09:43:47
 tags: [Rust, RISC-V]
 category: [OSCamp]

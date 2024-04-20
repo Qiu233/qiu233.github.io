@@ -1,5 +1,5 @@
 ---
-title: OSCamp D8-rCore-Chapter-4-Address Translation
+title: OSCamp D8-rCore-Chapter 4 Address Translation
 date: 2024-04-15 14:23:31
 tags: [Rust, RISC-V]
 category: [OSCamp]

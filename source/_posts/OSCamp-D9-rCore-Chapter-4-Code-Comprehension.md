@@ -1,5 +1,5 @@
 ---
-title: OSCamp D9-rCore-Chapter-4-Code Comprehension
+title: OSCamp D9-rCore-Chapter 4 Code Comprehension
 date: 2024-04-16 12:14:07
 tags: [Rust, RISC-V]
 category: [OSCamp]
