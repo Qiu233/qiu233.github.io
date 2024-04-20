@@ -16,6 +16,7 @@ category: [OSCamp]
 > 作为作者，我保证本系列文章：
 > * 皆遵守[荣誉准则](https://learningos.cn/rCore-Tutorial-Guide-2024S/honorcode.html)。
 > * 皆由我一人独自完成。
+> * 未使用任何形式的AI生成的代码。
 >
 > 若事实与我所说不符，我愿承担其导致的一切责任。
 
