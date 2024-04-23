@@ -73,23 +73,3 @@ RISC-V有三种最基本的模式：
 进展比我预想的顺利，相比于x86，RISC-V的架构清晰得多，而且教程已经把sbi实现好了，只用寥寥数行代码就能进入Rust world，甚至到目前为止都没有接触过多少RISC-V的实际指令。
 
 下一步就是动手实践和做练习题了。
-
-# 关于Rust
-补充上一篇文章。
-
-Rust的Algebraic Data Types：
-
-* Empty，即感叹号`!`
-* Unit，即`()`
-* 积类型，即tuple和`struct`
-* 和类型，即discriminated union，也就是Rust的`enum`
-
-这里不得不提一嘴，Rust的Emtpy是编译器开的后门，程序员不能自己定义。这样的写法
-```Rust
-struct Unit;
-```
-
-居然是Rust的Unit，而大部分函数式编程语言或者proof assistant中这种没有constructor的定义都是Empty，就你搞特殊是吧？
-
-至于GADT，因为Rust完全没有高阶类型和阶(kind)的概念，所以GADT也基本不用想了。
-

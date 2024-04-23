@@ -10,16 +10,17 @@ category: [OSCamp]
 # rustlings
 仓库地址是：[https://github.com/LearningOS/rust-rustlings-2024-spring-Qiu233](https://github.com/LearningOS/rust-rustlings-2024-spring-Qiu233)
 
+
 因为以前没怎么写过Rust，而且算法是我的薄弱项，所以多花了点时间。关于题目没什么好说的，下面说说我对Rust的整体理解。
 
 ## 类型系统
 Rust的类型系统大致可以分成几个方面：
 * System F，也就是parametric polymorphism
 * trait，一种ad-hoc polymorphism，另外Rust没有函数重载
-* Associated Type
-* Const Generics
-* Ownership，类似于Linear Types
-* Borrow和Lifetime Parameter
+* Associated Type，类比Haskell的functional dependecies
+* Const Generics，仅限于基础类型的type to kind promotion
+* Ownership，类似于Linear Types，但是有很多例外
+* Lifetime Parameter和相关的variance，例如`'static <: 'a`可以让全局的引用被更小的生命周期使用
 
 Rust的trait可以看作具有强制类型参数`Self`的typeclass，例如：
 
@@ -29,22 +30,38 @@ trait A {
 }
 ```
 
-本质上和Haskell的写法
+本质上和下面Haskell的写法差不太多。
 
 ```Haskell
 class A Self where
     ...
 ```
 
-差不太多，不过Rust的`Self`应该是用Associated Type实现的，所以从这个角度来说Rust的trait其实更像C#的abstract static interface，并且因为没有高阶类型，所以类型参数更像是泛型系统的一部分。
-
-Rust的Associated Type和Haskell的Associated Type虽然同名，但Rust的Associated Type并不是Type Family，作用上来说只是一类特殊的类型参数，防止一个trait因为类型参数不同被多次实现。
+Rust的Associated Type和Haskell的Associated Type虽然同名，但Rust的并不是Type Family，作用上来说只是一类特殊的类型参数(见functional dependencies)，防止一个trait因为类型参数不同被多次实现。
 
 Const Generics允许将编译期常量当作类型参数，不过只有少数几个类型(primitive types)可以，如果非要在类型论中找个解释，大概是把这些类型promote到trait，然后把它们的编译期确定的值promote到type，类似Haskell的DataKinds。
 
 Rust没有kind，没有高阶类型，因此没有Monad。可预见的未来大概也不会有高阶类型了，因为就算有也很难和现在默认具有Self类型参数的trait兼容。
 
 但是令人惊讶的是Rust的问号?有专属语法和还有Try和Error的trait支持，还不算太难用。
+
+### ADT
+
+Rust的Algebraic Data Types：
+
+* Empty，即感叹号`!`
+* Unit，即`()`
+* 积类型，即tuple和`struct`
+* 和类型，即discriminated union，也就是Rust的`enum`
+
+Rust的Emtpy是编译器开的后门，程序员不能自己定义。这样的写法：
+```Rust
+struct Unit;
+```
+
+居然是Rust的Unit，而大部分函数式编程语言或者proof assistant中这种没有constructor的定义都是Empty，就Rust搞特殊。
+
+至于GADT，因为Rust完全没有高阶类型和阶(kind)的概念，所以GADT也基本不用想了。
 
 ## 所有权
 
@@ -118,4 +135,19 @@ fn main() {
 
 因为main第二行b延续了a的可变引用的生命周期，导致第三行无法再借出可变引用。
 
-之后其他思考在其他文章里补充吧。
+
+## 智能指针和Interior Mutability
+大部分智能指针，如Box、Arc等不可变，可理解成一个指向Heap上的不可变引用，连元数据也在堆上，所以长度**仅有指针大小**。
+
+可变性需要内层的容器支持，叫做内部可变性，这种容器的长度等于容器的元数据长度加上内容长度，可以在堆上也可以在栈上。
+
+包括：
+
+* RefCell：运行时检查引用规则的容器
+* UnsafeCell：同RefCell但是无检查
+* Cell：非引用访问，只能"整存整取"
+* Mutex：纯互斥锁，所有形式的访问都只能存在最多一个
+* RwLock：类似Mutex，但是允许一个写**或**多个读
+
+一般Heap上的**可读可写**数据由智能指针和内层的容器构成，例如`Arc<Mutex<Foo>>`。
+
