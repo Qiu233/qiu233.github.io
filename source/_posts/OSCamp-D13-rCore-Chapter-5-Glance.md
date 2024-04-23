@@ -5,9 +5,13 @@ tags: [Rust, RISC-V, Memory]
 category: [OSCamp]
 ---
 
-# 进程调度
+下面是第五章的进程切换示意图：
+
 {% asset_img rcore-ch5-task-scheduling.png %}
 
+<!--more-->
+
+# 进程调度
 
 上图展示的是第五章的进程切换方式，和前几章不同的是第五章用一个`idle task`来切换，它有如下性质：
 

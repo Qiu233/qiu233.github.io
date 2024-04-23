@@ -7,11 +7,11 @@ category: [OSCamp]
 
 今天的课程因为官网炸了导致无法进行，所以我就按照自己的进度来了。
 
-# rustlings
 仓库地址是：[https://github.com/LearningOS/rust-rustlings-2024-spring-Qiu233](https://github.com/LearningOS/rust-rustlings-2024-spring-Qiu233)
 
-
 因为以前没怎么写过Rust，而且算法是我的薄弱项，所以多花了点时间。关于题目没什么好说的，下面说说我对Rust的整体理解。
+
+<!--more-->
 
 ## 类型系统
 Rust的类型系统大致可以分成几个方面：

@@ -14,6 +14,8 @@ category: [OSCamp]
 {% asset_img rcore-ch4-mm-spaces.png %}
 {% asset_img rcore-ch4-mm-hierarchy.png %}
 
+<!--more-->
+
 # 地址空间
 图中包括内核的地址空间和两个进程的地址空间。**虚线表示地址相等，没有虚线的部分的宽度比例没有实际意义。**
 
