@@ -1,5 +1,5 @@
 ---
-title: OSCamp D14-rCore Chapter 4-Lazy实现、mmap及收尾
+title: OSCamp D13-rCore Chapter 4-Lazy实现、mmap及收尾
 date: 2024-04-20 17:50:33
 tags: [Rust, RISC-V, Memory]
 category: [OSCamp]

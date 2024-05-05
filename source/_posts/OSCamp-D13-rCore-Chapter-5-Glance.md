@@ -1,7 +1,7 @@
 ---
-title: OSCamp D14-rCore Chapter 5-Glance
+title: OSCamp D13-rCore Chapter 5-Glance
 date: 2024-04-20 21:04:38
-tags: [Rust, RISC-V, Memory]
+tags: [Rust, RISC-V]
 category: [OSCamp]
 ---
 
@@ -25,7 +25,7 @@ idle task的代码只有一个简单的循环(函数`run_tasks`中)：
 2. 用`__switch`切换至该进程，并且把当前状态保存至`idle_task_cx`。
 3. 当该进程返回，会通过`__switch`切回到此处，跳转至循环头，开始下一轮调度。
 
-`run_tasks`函数的唯一一次调用在`rust_main`中，内核在初始化完毕后直接进入此处开始执行进程，在进程队列为空时变成空耗的循环。
+`run_tasks`函数的唯一一次调用在`rust_main`中，运行在boot stack上，不是任何内核栈。内核在初始化完毕后直接进入此处开始执行进程，在进程队列为空时变成空耗的循环。
 
 有一个特殊情况：当进程结束并切换至idle task时，TaskContext不会被保存，因为该进程绝对不会再次被调度，见函数`exit_current_and_run_next`。
 
