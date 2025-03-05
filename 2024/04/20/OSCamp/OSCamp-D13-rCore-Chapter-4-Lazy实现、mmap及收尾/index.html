@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha256-dABdfBfUoC8vJUBOwGVdm8L9qlMWaHTIfXt+7GnZCIo=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"qiu233.github.io","root":"/","images":"/images","scheme":"Muse","darkmode":true,"version":"8.22.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="第四章的难度略高，这作为本章学习记录的最后一篇吧，不打算花更多时间在这上面了。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OSCamp D13-rCore Chapter 4-Lazy实现、mmap及收尾">
+<meta property="og:url" content="https://qiu233.github.io/2024/04/20/OSCamp/OSCamp-D13-rCore-Chapter-4-Lazy%E5%AE%9E%E7%8E%B0%E3%80%81mmap%E5%8F%8A%E6%94%B6%E5%B0%BE/index.html">
+<meta property="og:site_name" content="Qiu的博客">
+<meta property="og:description" content="第四章的难度略高，这作为本章学习记录的最后一篇吧，不打算花更多时间在这上面了。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-04-20T09:50:33.000Z">
+<meta property="article:modified_time" content="2025-03-05T14:25:42.364Z">
+<meta property="article:author" content="Qiu">
+<meta property="article:tag" content="Rust">
+<meta property="article:tag" content="RISC-V">
+<meta property="article:tag" content="Memory">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://qiu233.github.io/2024/04/20/OSCamp/OSCamp-D13-rCore-Chapter-4-Lazy%E5%AE%9E%E7%8E%B0%E3%80%81mmap%E5%8F%8A%E6%94%B6%E5%B0%BE/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://qiu233.github.io/2024/04/20/OSCamp/OSCamp-D13-rCore-Chapter-4-Lazy%E5%AE%9E%E7%8E%B0%E3%80%81mmap%E5%8F%8A%E6%94%B6%E5%B0%BE/","path":"2024/04/20/OSCamp/OSCamp-D13-rCore-Chapter-4-Lazy实现、mmap及收尾/","title":"OSCamp D13-rCore Chapter 4-Lazy实现、mmap及收尾"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>OSCamp D13-rCore Chapter 4-Lazy实现、mmap及收尾 | Qiu的博客</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Qiu的博客</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#lazy%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF"><span class="nav-number">1.</span> <span class="nav-text"> Lazy实现思路</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#mmap%E5%92%8Cmunmap"><span class="nav-number">2.</span> <span class="nav-text"> mmap和munmap</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E9%A1%BA%E5%BA%8F"><span class="nav-number">3.</span> <span class="nav-text"> 内存顺序</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Qiu</p>
+  <div class="site-description" itemprop="description">数学和编程</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://qiu233.github.io/2024/04/20/OSCamp/OSCamp-D13-rCore-Chapter-4-Lazy%E5%AE%9E%E7%8E%B0%E3%80%81mmap%E5%8F%8A%E6%94%B6%E5%B0%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Qiu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qiu的博客">
+      <meta itemprop="description" content="数学和编程">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="OSCamp D13-rCore Chapter 4-Lazy实现、mmap及收尾 | Qiu的博客">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OSCamp D13-rCore Chapter 4-Lazy实现、mmap及收尾
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-04-20 17:50:33" itemprop="dateCreated datePublished" datetime="2024-04-20T17:50:33+08:00">2024-04-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-03-05 22:25:42" itemprop="dateModified" datetime="2025-03-05T22:25:42+08:00">2025-03-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/OSCamp/" itemprop="url" rel="index"><span itemprop="name">OSCamp</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>第四章的难度略高，这作为本章学习记录的最后一篇吧，不打算花更多时间在这上面了。</p>
+<span id="more"></span>
+<h1 id="lazy实现思路"><a class="markdownIt-Anchor" href="#lazy实现思路"></a> Lazy实现思路</h1>
+<p>把原有<code>MemorySet::push</code>函数分成两种：</p>
+<ul>
+<li><code>push_strict</code>：将area压入并立刻为其分配所有需要的Frame，对<code>TRAP_CONTEXT_BASE</code>和ELF文件的LOAD段应当采用这种方式。</li>
+<li><code>push_lazy</code>：将area压入，参数<code>data</code>不为<code>None</code>时分配需要的空间，如果为<code>None</code>则完全不分配空间。</li>
+</ul>
+<p>程序运行时若触发page fault，trap handler会对<code>stval</code>中地址对应的目标虚拟页调用<code>MemorySet::translate</code>，该函数返回<code>MMResult&lt;PageTableEntry&gt;</code>，函数的作用是：</p>
+<ol>
+<li>若所有area的范围都不包含目标页(<code>vpn</code>)，那么返回错误。</li>
+<li>若有area的范围包含目标页，调用该area的<code>ensure_range</code>函数，传入<code>[vpn, vpn + 1)</code>。</li>
+<li><code>MapArea::ensure_range</code>函数会<strong>保证这一段区域被分配物理内存且映射</strong>，否则返回错误，如果已经映射那么直接返回Ok。</li>
+<li>以上流程后，调用<code>page_table</code>的<code>translate</code>，计算出PTE的位置并返回PTE的值。</li>
+</ol>
+<p>如上述得到的结果<code>MMResult&lt;PageTableEntry&gt;</code>有如下用途：</p>
+<ul>
+<li>如果是错误码，那么一定出现了无法恢复的错误，例如尝试分配内存但是内存耗尽，或请求的地址没有在任何area中，OS立刻结束当前程序。</li>
+<li>如果是Ok，那么得到的PTE将用于检查对应位是否具有请求的访问权限。例如触发page fault的是写入指令，那么PTE的W和R必须为1，否则访问权限出错，程序结束。</li>
+<li>本章课程的进程空间所有映射的U位都一定为1，所以不必检查U位。</li>
+</ul>
+<p>Lazy的一个重要性质是：</p>
+<blockquote>
+<p>不必考虑&quot;分配失败&quot;时的回收，如果某个page fault发生时分配也失败，那么直接结束程序释放所有内存。这样做的原因是：</p>
+<p>用<code>push_lazy</code>分配地址空间时不会因为物理内存用尽而失败，程序当下用到多少就分配多少，而page fault时一次只分配一个Frame，如果映射失败，获得的FrameTracker会被drop掉。</p>
+<p>目前还没做页面置换，所以物理内存耗尽时没有什么更好的办法了。</p>
+</blockquote>
+<h1 id="mmap和munmap"><a class="markdownIt-Anchor" href="#mmap和munmap"></a> mmap和munmap</h1>
+<p>这两个东西实现起来有些繁琐，虽然课程内容似乎没有要求，但我实现了如下性质：</p>
+<blockquote>
+<p><code>munmap</code>的参数可以横跨多个area，也可以在某个area的中间或两端。总而言之，唯一的要求是参数传入的范围必须<strong>全部都在已有的area中</strong>。</p>
+</blockquote>
+<ul>
+<li>如果传入的范围(本段内简称range)在某个area的中间，那么调用后该area会被裂成两块。</li>
+<li>上述的两块中若有空area，即range在原area的两端之一，那么调用后仅有不为空的块保留。</li>
+<li>更特殊的情况是range覆盖了某个area，那么该area会被移除，即上述两块都为空的情况。</li>
+<li>该函数会对所有area重复以上过程，因此对横跨多个area的情况也适用。</li>
+</ul>
+<p>综上，只有刚刚好在指定范围中的虚拟页会被unmap，而原有的area中除此之外的虚拟页会被保留。该算法在<code>mmap</code>和<code>munmap</code>导致的area数量较多时效率会降低，因为我没有实现相同权限的相邻area合并。</p>
+<p>此外，<code>munmap</code>要求：</p>
+<ul>
+<li>参数地址必须按4K对齐。</li>
+<li>参数指定的范围不能含有特殊页，例如<code>TRAP_CONTEXT_BASE</code>和<code>TRAMPOLINE</code>。如果这两块被unmap那么进程空间将永久失去trap能力，系统崩溃。</li>
+<li>参数指定的范围不能含有未被任何area包含的部分。</li>
+</ul>
+<p><code>mmap</code>需要检查：</p>
+<ul>
+<li>参数地址必须按4K对齐。</li>
+<li>参数指定的范围不能含有特殊地址，例如<code>TRAP_CONTEXT_BASE</code>和<code>TRAMPOLINE</code>。原因同上</li>
+<li>权限参数必须有效，即XWR三项不得都为0，且除这三项外必须全为0。</li>
+<li>参数指定范围没有任何已经map的部分。</li>
+</ul>
+<p>而<code>mmap</code>实现十分简单，只需要在检查之后调用<code>push_lazy</code>将area记录即可，具体的分配要等到page fault触发时。</p>
+<h1 id="内存顺序"><a class="markdownIt-Anchor" href="#内存顺序"></a> 内存顺序</h1>
+<p>内存顺序(Memory Order)真的是一个大坑，本节相关的只有<code>sfence.vma</code>指令，作用是在设置satp寄存器之后刷新TLB。</p>
+<p>LR/SC全称是(Load Reserved/Store Conditional)：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="http://LR.aq">LR.aq</a>：从内存某个位置加载，并且<strong>获得</strong>(acquire)该位置。</li>
+<li>SC.rl：写入内存位置，只有之前用LR.aq获得了该位置且并未失效，这条指令才会成功。</li>
+</ul>
+<p>失效的原因是该位置被其他hart或IO设备写入了，代表前面读取的值已经不再有效，此时<code>SC.rl</code>的第一个寄存器operand中的值不为0表示失败，一般在失败时要跳回<code>LR.aq</code>重新再来。这样一个完整的流程叫做CAS。</p>
+<p>aq和rl是RISC-V所有原子指令都有的字段：</p>
+<ul>
+<li><code>aq</code>表示acquire，为1表示该指令后的所有存储指令必须等它完成才开始执行，<code>LR.aq</code>保证读取发生在后面的指令之前。</li>
+<li><code>rl</code>表示release，为1表示该指令前的所有存储指令必须为该指令观察到，<code>SC.rl</code>保证写入发生时前面的读取已完成。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Rust/" rel="tag"># Rust</a>
+              <a href="/tags/RISC-V/" rel="tag"># RISC-V</a>
+              <a href="/tags/Memory/" rel="tag"># Memory</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/" rel="prev" title="OSCamp D9-rCore-Chapter 4-Code Comprehension">
+                  <i class="fa fa-angle-left"></i> OSCamp D9-rCore-Chapter 4-Code Comprehension
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/04/20/OSCamp/OSCamp-D13-rCore-Chapter-5-Glance/" rel="next" title="OSCamp D13-rCore Chapter 5-Glance">
+                  OSCamp D13-rCore Chapter 5-Glance <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Qiu</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha256-UF1fgpAiu3tPJN/uCqEUHNe7pnr+QR0SQDNfgglgtcM=" crossorigin="anonymous">
+
+
+
+</body>
+</html>

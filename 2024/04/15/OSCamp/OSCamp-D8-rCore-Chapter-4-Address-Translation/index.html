@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha256-dABdfBfUoC8vJUBOwGVdm8L9qlMWaHTIfXt+7GnZCIo=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"qiu233.github.io","root":"/","images":"/images","scheme":"Muse","darkmode":true,"version":"8.22.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="今天花了不少时间读spec，然后做了下面这张图(Sv39)。其中去掉了权限等等细节，只保留了地址转换的大框架。本节内容围绕这张图展开。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OSCamp D8-rCore-Chapter 4-Address Translation">
+<meta property="og:url" content="https://qiu233.github.io/2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/index.html">
+<meta property="og:site_name" content="Qiu的博客">
+<meta property="og:description" content="今天花了不少时间读spec，然后做了下面这张图(Sv39)。其中去掉了权限等等细节，只保留了地址转换的大框架。本节内容围绕这张图展开。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://qiu233.github.io/2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/sv39.png">
+<meta property="article:published_time" content="2024-04-15T06:23:31.000Z">
+<meta property="article:modified_time" content="2025-03-05T14:25:42.364Z">
+<meta property="article:author" content="Qiu">
+<meta property="article:tag" content="Rust">
+<meta property="article:tag" content="RISC-V">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://qiu233.github.io/2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/sv39.png">
+
+
+<link rel="canonical" href="https://qiu233.github.io/2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://qiu233.github.io/2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/","path":"2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/","title":"OSCamp D8-rCore-Chapter 4-Address Translation"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>OSCamp D8-rCore-Chapter 4-Address Translation | Qiu的博客</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Qiu的博客</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9C%B0%E5%9D%80%E8%BD%AC%E6%8D%A2"><span class="nav-number">1.</span> <span class="nav-text"> 地址转换</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%89%A9%E7%90%86%E5%9C%B0%E5%9D%80-%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80"><span class="nav-number">1.1.</span> <span class="nav-text"> 物理地址、虚拟地址</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A1%B5%E8%A1%A8"><span class="nav-number">1.2.</span> <span class="nav-text"> 页表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BD%AC%E6%8D%A2%E7%AE%97%E6%B3%95"><span class="nav-number">1.3.</span> <span class="nav-text"> 转换算法</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#asid%E5%92%8Ctlb"><span class="nav-number">2.</span> <span class="nav-text"> ASID和TLB</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Qiu</p>
+  <div class="site-description" itemprop="description">数学和编程</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://qiu233.github.io/2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Qiu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qiu的博客">
+      <meta itemprop="description" content="数学和编程">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="OSCamp D8-rCore-Chapter 4-Address Translation | Qiu的博客">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OSCamp D8-rCore-Chapter 4-Address Translation
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-04-15 14:23:31" itemprop="dateCreated datePublished" datetime="2024-04-15T14:23:31+08:00">2024-04-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-03-05 22:25:42" itemprop="dateModified" datetime="2025-03-05T22:25:42+08:00">2025-03-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/OSCamp/" itemprop="url" rel="index"><span itemprop="name">OSCamp</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>今天花了不少时间读spec，然后做了下面这张图(Sv39)。其中去掉了权限等等细节，只保留了地址转换的大框架。本节内容围绕这张图展开。</p>
+<img src="/2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/sv39.png" class="" title="Sv39">
+<span id="more"></span>
+<h1 id="地址转换"><a class="markdownIt-Anchor" href="#地址转换"></a> 地址转换</h1>
+<h2 id="物理地址-虚拟地址"><a class="markdownIt-Anchor" href="#物理地址-虚拟地址"></a> 物理地址、虚拟地址</h2>
+<ul>
+<li>物理地址简称PA，虚拟地址简称VA。</li>
+<li>PPN是Physical Page Number的缩写，Sv39中<strong>所有PPN的长度都为44位</strong>。</li>
+<li>VPN是Virtual Page Number的缩写，Sv39中<strong>所有VPN的长度都为27位</strong>。</li>
+<li>PAGESIZE是一个Page的大小，RV32和RV64的PAGESIZE都是4096(即4K)，长度为12位。</li>
+</ul>
+<p>给定Page Number计算对应地址的算法是：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable width="100%"><mtr><mtd width="50%"></mtd><mtd><mrow><mi>x</mi><mi>A</mi><mo>=</mo><mi>x</mi><mi>P</mi><mi>N</mi><mo>×</mo><mn>4</mn><mi>K</mi></mrow></mtd><mtd width="50%"></mtd><mtd><mtext>(1)</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">xA=xPN \times 4K\tag{1}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal">x</span><span class="mord mathnormal">A</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.76666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal">x</span><span class="mord mathnormal" style="margin-right:0.13889em;">P</span><span class="mord mathnormal" style="margin-right:0.10903em;">N</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord">4</span><span class="mord mathnormal" style="margin-right:0.07153em;">K</span></span><span class="tag"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">(</span><span class="mord"><span class="mord">1</span></span><span class="mord">)</span></span></span></span></span></span></p>
+<p>注意到乘以4K相当于左移12位，即：</p>
+<ul>
+<li>PA的长度为44+12=56位。</li>
+<li>VA的长度为27+12=39位，Sv39因此得名。</li>
+</ul>
+<p>例如图的最上方是寄存器<code>satp</code>的结构，其中root的PPN是低44位，长度正好和描述的一致。</p>
+<h2 id="页表"><a class="markdownIt-Anchor" href="#页表"></a> 页表</h2>
+<p>页表是一个树状结构，在Sv39中除root外<strong>最多只有三层</strong>，从高到低记作level 2、level 1、level 0。root是页表的根节点，保存在<code>satp</code>的低44位，将它乘以4K即得到root下一层的物理地址。</p>
+<p>从虚拟地址到物理地址的映射由MMU通过算法完成，该算法输入一个VA，从页表的root出发找到一条到叶子节点的路径，并根据该路径转换到PA。VA在这个过程中决定了该路径，如果不存在这样的路径，那么会出现page fault。</p>
+<p>页表的项叫做PTE(Page Table Entry)。每一个PTE都有PPN字段，图中由并排的(26+9+9)三个矩形表示，长度刚好是44位，而完整的PTE长度是64位，没有标出的20位包含了页的访问权限等信息，我们暂时不考虑这些。</p>
+<p>PTE有两种情况：</p>
+<ul>
+<li>叶子节点：图中所有PPN带有涂色的PTE。包括一块到三块涂色，都是叶子节点。</li>
+<li>内部节点：PPN三个块均无涂色的PTE。</li>
+</ul>
+<h2 id="转换算法"><a class="markdownIt-Anchor" href="#转换算法"></a> 转换算法</h2>
+<ul>
+<li>0层的叶子节点的2、1、0块PPN(共44位)都被涂成绿色，表示转换后的PA的，<strong>高44位</strong>被这44位填充，低12位直接从输入的VA的page offset复制。</li>
+<li>1层的叶子节点只有2、1块PPN(共35位)被涂成蓝色，0块为0，表示转换后PA只有，<strong>高35位</strong>被涂色的部分填充，低12+9=21位直接从VA复制。</li>
+<li>2层的叶子节点只有编号为2的块(共26位)被涂成橙色，表示PA只有<strong>高26位</strong>被涂色部分填充，低12+9+9=30位直接从VA复制。</li>
+</ul>
+<p>注意！后两种情况被称为superpage，没有被涂色的部分必须为0，否则将会page fault。</p>
+<p>内部节点没有涂色，此时整块PPN(44位)根据公式<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(1)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mclose">)</span></span></span></span>得到的PA即是下一层页表的起始地址，MMU会根据VA.VPN计算出下一层的具体位置。</p>
+<p>总结出来即是以下三条公式：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable width="100%"><mtr><mtd width="50%"></mtd><mtd><mrow><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false">(</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi></mrow><mo separator="true">,</mo><mrow><mi mathvariant="normal">v</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi></mrow><mo stretchy="false">)</mo><mo>=</mo><mo>∗</mo><mo stretchy="false">(</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi></mrow><mo>×</mo><mn>4096</mn><mo>+</mo><mrow><mi mathvariant="normal">v</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi></mrow><mo>×</mo><mn>8</mn><mo stretchy="false">)</mo></mrow></mtd><mtd width="50%"></mtd><mtd><mtext>(2)</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">\mathrm{pte}(\mathrm{ppn}, \mathrm{vpn}) = *(\mathrm{ppn}\times 4096+\mathrm{vpn}\times 8)\tag{2}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">t</span><span class="mord mathrm">e</span></span><span class="mopen">(</span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span></span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∗</span><span class="mopen">(</span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.72777em;vertical-align:-0.08333em;"></span><span class="mord">4</span><span class="mord">0</span><span class="mord">9</span><span class="mord">6</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.7777700000000001em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">8</span><span class="mclose">)</span></span><span class="tag"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">(</span><span class="mord"><span class="mord">2</span></span><span class="mord">)</span></span></span></span></span></span></p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable width="100%"><mtr><mtd width="50%"></mtd><mtd><mtable rowspacing="0.15999999999999992em" columnspacing="1em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi></mrow><mo stretchy="false">(</mo><mrow><mi mathvariant="normal">v</mi><mi mathvariant="normal">a</mi></mrow><mo separator="true">,</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi></mrow><mo separator="true">,</mo><mi>i</mi><mo stretchy="false">)</mo><mo>=</mo><mrow><mo fence="true">{</mo><mtable rowspacing="0.24999999999999992em" columnalign="right left right left" columnspacing="0em 1em 0em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mrow><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">t</mi></mrow><mtext> </mtext><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">t</mi><msup><mi mathvariant="normal">e</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup></mrow><mo>=</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi></mrow><mo stretchy="false">(</mo><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi></mrow><mo separator="true">,</mo><mrow><mi mathvariant="normal">v</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">v</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi><mo stretchy="false">[</mo><mi>i</mi><mo stretchy="false">]</mo></mrow><mo stretchy="false">)</mo><mtext> </mtext><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">n</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">t</mi><msup><mi mathvariant="normal">e</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup></mrow><mi mathvariant="normal">.</mi><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi><mo stretchy="false">[</mo><mi>i</mi><mo>:</mo><mn>2</mn><mo stretchy="false">]</mo></mrow><mo>⊕</mo><mrow><mi mathvariant="normal">v</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">v</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi><mo stretchy="false">[</mo><mn>0</mn><mo>:</mo><mi>i</mi><mo>−</mo><mn>1</mn><mo stretchy="false">]</mo><mo>⊕</mo><mrow><mi mathvariant="normal">v</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">g</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">f</mi><mi mathvariant="normal">f</mi></mrow></mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo separator="true">,</mo><mrow><mi mathvariant="normal">i</mi><mi mathvariant="normal">f</mi><mtext> </mtext><mi mathvariant="normal">p</mi><mi mathvariant="normal">t</mi><msup><mi mathvariant="normal">e</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup><mtext> </mtext><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mtext> </mtext><mi mathvariant="normal">l</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">f</mi></mrow></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mo stretchy="false">(</mo><mi mathvariant="normal">v</mi><mi mathvariant="normal">a</mi><mo separator="true">,</mo><mi mathvariant="normal">p</mi><mi mathvariant="normal">t</mi><msup><mi mathvariant="normal">e</mi><mo mathvariant="normal" lspace="0em" rspace="0em">′</mo></msup><mi mathvariant="normal">.</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi><mo separator="true">,</mo><mi>i</mi><mo>−</mo><mn>1</mn><mo stretchy="false">)</mo></mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo separator="true">,</mo><mrow><mi mathvariant="normal">o</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">h</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">w</mi><mi mathvariant="normal">i</mi><mi mathvariant="normal">s</mi><mi mathvariant="normal">e</mi></mrow></mrow></mstyle></mtd></mtr></mtable></mrow></mrow></mstyle></mtd></mtr></mtable></mtd><mtd width="50%"></mtd><mtd><mtext>(3)</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{matrix}
+    \mathrm{trans}(\mathrm{va}, \mathrm{ppn},i) =\left\{
+    \begin{aligned}
+        &amp;\mathrm{let}\ \mathrm{pte&#x27;} = \mathrm{pte}(\mathrm{ppn}, \mathrm{va.vpn[\mathnormal{i}]})\ \mathrm{in}\\
+        &amp;\mathrm{pte&#x27;}.\mathrm{ppn[\mathnormal{i}:2]}\oplus\mathrm{va.vpn[0:\mathnormal{i}-1]\oplus\mathrm{va.pgoff}}&amp;&amp;,\mathrm{if\ pte&#x27;\ is\ leaf} \\
+        &amp;\mathrm{trans(va,pte&#x27;.ppn, \mathnormal{i}-1)}&amp;&amp;,\mathrm{otherwise}
+    \end{aligned}\right.
+\end{matrix}\tag{3}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:4.500000000000002em;vertical-align:-2.0000000000000004em;"></span><span class="mord"><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.5000000000000013em;"><span style="top:-4.5em;"><span class="pstrut" style="height:4.5em;"></span><span class="mord"><span class="mord"><span class="mord mathrm">t</span><span class="mord mathrm">r</span><span class="mord mathrm">a</span><span class="mord mathrm">n</span><span class="mord mathrm">s</span></span><span class="mopen">(</span><span class="mord"><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">a</span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathnormal">i</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="minner"><span class="mopen"><span class="delimsizing mult"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.35002em;"><span style="top:-2.19999em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎩</span></span></span><span style="top:-2.19499em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎪</span></span></span><span style="top:-2.20499em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎪</span></span></span><span style="top:-3.15001em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎨</span></span></span><span style="top:-4.2950099999999996em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎪</span></span></span><span style="top:-4.30501em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎪</span></span></span><span style="top:-4.60002em;"><span class="pstrut" style="height:3.15em;"></span><span class="delimsizinginner delim-size4"><span>⎧</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.8500199999999998em;"><span></span></span></span></span></span></span><span class="mord"><span class="mtable"><span class="col-align-r"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.5000000000000004em;"><span style="top:-4.5em;"><span class="pstrut" style="height:2.84em;"></span><span class="mord"></span></span><span style="top:-3em;"><span class="pstrut" style="height:2.84em;"></span><span class="mord"></span></span><span style="top:-1.4999999999999991em;"><span class="pstrut" style="height:2.84em;"></span><span class="mord"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.000000000000001em;"><span></span></span></span></span></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:2.5000000000000004em;"><span style="top:-4.66em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mord"><span class="mord mathrm">l</span><span class="mord mathrm">e</span><span class="mord mathrm">t</span></span><span class="mspace"> </span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">t</span><span class="mord"><span class="mord mathrm">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.801892em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathrm mtight">′</span></span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">t</span><span class="mord mathrm">e</span></span><span class="mopen">(</span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">a</span><span class="mord mathrm">.</span><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal">i</span></span><span class="mclose">]</span></span><span class="mclose">)</span><span class="mspace"> </span><span class="mord"><span class="mord mathrm">i</span><span class="mord mathrm">n</span></span></span></span><span style="top:-3.16em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">t</span><span class="mord"><span class="mord mathrm">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.801892em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathrm mtight">′</span></span></span></span></span></span></span></span></span></span><span class="mord">.</span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span><span class="mopen">[</span><span class="mord"><span class="mord mathnormal">i</span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">:</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord mathrm">2</span><span class="mclose">]</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">a</span><span class="mord mathrm">.</span><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span><span class="mopen">[</span><span class="mord mathrm">0</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">:</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord"><span class="mord mathnormal">i</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathrm">1</span><span class="mclose">]</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">⊕</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">a</span><span class="mord mathrm">.</span><span class="mord mathrm">p</span><span class="mord mathrm" style="margin-right:0.01389em;">g</span><span class="mord mathrm">o</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span></span></span></span></span><span style="top:-1.6599999999999993em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mord"><span class="mord mathrm">t</span><span class="mord mathrm">r</span><span class="mord mathrm">a</span><span class="mord mathrm">n</span><span class="mord mathrm">s</span><span class="mopen">(</span><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">a</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathrm">p</span><span class="mord mathrm">t</span><span class="mord"><span class="mord mathrm">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.801892em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathrm mtight">′</span></span></span></span></span></span></span></span></span><span class="mord mathrm">.</span><span class="mord mathrm">p</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathnormal">i</span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathrm">1</span><span class="mclose">)</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.000000000000001em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:1em;"></span><span class="col-align-r"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0000000000000002em;"><span style="top:-3em;"><span class="pstrut" style="height:2.84em;"></span><span class="mord"></span></span><span style="top:-1.4999999999999991em;"><span class="pstrut" style="height:2.84em;"></span><span class="mord"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.000000000000001em;"><span></span></span></span></span></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.0000000000000002em;"><span style="top:-3.16em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathrm">i</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span><span class="mspace"> </span><span class="mord mathrm">p</span><span class="mord mathrm">t</span><span class="mord"><span class="mord mathrm">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.801892em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathrm mtight">′</span></span></span></span></span></span></span></span></span><span class="mspace"> </span><span class="mord mathrm">i</span><span class="mord mathrm">s</span><span class="mspace"> </span><span class="mord mathrm">l</span><span class="mord mathrm">e</span><span class="mord mathrm">a</span><span class="mord mathrm" style="margin-right:0.07778em;">f</span></span></span></span><span style="top:-1.6599999999999993em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord"></span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord mathrm">o</span><span class="mord mathrm">t</span><span class="mord mathrm">h</span><span class="mord mathrm">e</span><span class="mord mathrm">r</span><span class="mord mathrm" style="margin-right:0.01389em;">w</span><span class="mord mathrm">i</span><span class="mord mathrm">s</span><span class="mord mathrm">e</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.000000000000001em;"><span></span></span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:2.0000000000000004em;"><span></span></span></span></span></span></span></span></span><span class="tag"><span class="strut" style="height:4.500000000000002em;vertical-align:-2.0000000000000004em;"></span><span class="mord text"><span class="mord">(</span><span class="mord"><span class="mord">3</span></span><span class="mord">)</span></span></span></span></span></span></p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable width="100%"><mtr><mtd width="50%"></mtd><mtd><mrow><mrow><mi mathvariant="normal">p</mi><mi mathvariant="normal">a</mi><mo stretchy="false">(</mo><mi mathvariant="normal">v</mi><mi mathvariant="normal">a</mi><mo stretchy="false">)</mo></mrow><mo>=</mo><mrow><mi mathvariant="normal">t</mi><mi mathvariant="normal">r</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">s</mi><mo stretchy="false">(</mo><mi mathvariant="normal">v</mi><mi mathvariant="normal">a</mi><mo separator="true">,</mo><mi mathvariant="normal">S</mi><mi mathvariant="normal">A</mi><mi mathvariant="normal">T</mi><mi mathvariant="normal">P</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">p</mi><mi mathvariant="normal">n</mi><mo separator="true">,</mo><mn>2</mn><mo stretchy="false">)</mo></mrow></mrow></mtd><mtd width="50%"></mtd><mtd><mtext>(4)</mtext></mtd></mtr></mtable><annotation encoding="application/x-tex">\mathrm{pa(va)} = \mathrm{trans(va,SATP.ppn,2)}\tag{4}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathrm">p</span><span class="mord mathrm">a</span><span class="mopen">(</span><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">a</span><span class="mclose">)</span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord"><span class="mord mathrm">t</span><span class="mord mathrm">r</span><span class="mord mathrm">a</span><span class="mord mathrm">n</span><span class="mord mathrm">s</span><span class="mopen">(</span><span class="mord mathrm" style="margin-right:0.01389em;">v</span><span class="mord mathrm">a</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathrm">S</span><span class="mord mathrm">A</span><span class="mord mathrm">T</span><span class="mord mathrm">P</span><span class="mord mathrm">.</span><span class="mord mathrm">p</span><span class="mord mathrm">p</span><span class="mord mathrm">n</span><span class="mpunct">,</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord mathrm">2</span><span class="mclose">)</span></span></span><span class="tag"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord text"><span class="mord">(</span><span class="mord"><span class="mord">4</span></span><span class="mord">)</span></span></span></span></span></span></p>
+<p>运算符<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>⊕</mo></mrow><annotation encoding="application/x-tex">\oplus</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.66666em;vertical-align:-0.08333em;"></span><span class="mord">⊕</span></span></span></span>表示将bit从高位到地位相连。</p>
+<ul>
+<li>公式<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>4</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(4)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">4</span><span class="mclose">)</span></span></span></span>是初始条件，传入页表根节点的PPN。</li>
+<li>公式<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>2</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(2)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">2</span><span class="mclose">)</span></span></span></span>根据页表的PPN和VA的某块VPN，计算PTE的位置，并解引用返回PTE。对于初始条件，函数<code>pte</code>会返回level 2的节点。</li>
+<li>公式<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false">(</mo><mn>3</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">(3)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">3</span><span class="mclose">)</span></span></span></span>是递归定义，由于递归不是很深，读者可自行验证正确性。</li>
+</ul>
+<p>此外，公式没有覆盖出错的情况，例如如果在<code>i=0</code>时仍然不是叶子节点，依spec所述会发生page fault。如果需要完整的细节，请参考spec原文。</p>
+<p>该算法可以直接迁移到其他分页机制上，其中有几个常量可能需要改变：</p>
+<ul>
+<li>4096(bytes)，即4K，RV32和RV64的页大小都是4K，无需更改。</li>
+<li>8(bytes)，即PTE的长度，Sv32是4，本文的Sv39及其他RV64的分页机制都是8。</li>
+<li>2，即层数减去1，Sv39的层数是3所以这里是2。如果是Sv32那么就是1。如果是Sv48那么就是3。具体请参见文档。</li>
+</ul>
+<h1 id="asid和tlb"><a class="markdownIt-Anchor" href="#asid和tlb"></a> ASID和TLB</h1>
+<p>ASID是寄存器<code>satp</code>的一个字段，在RV64中长度为16位，全称为Address Space Identifier。</p>
+<p>TLB全称为Translation Lookaside Buffer，作用是缓存最近的地址转换结果来加速后续转换。TLB是<strong>不在RAM上的</strong>一块储存空间，每个hart都有自己独特的TLB。TLB中缓存的记录也包括对应的ASID。</p>
+<p>更新页表之后需要用指令<code>SFENCE.VMA</code>刷新<strong>当前</strong>hart的TLB，该指令也可以通过两个寄存器operand指定某个ASID和某个虚拟地址只让TLB的部分记录无效化，避免刷新整个TLB。</p>
+<p>注意！据spec所述，并不是所有RISC-V实现都支持ASID；即便支持，也不一定16个位都可用。在不支持ASID的实现上只能使用编号为0的ASID。一般一个ASID对应一个进程，但是ASID的总数有限，要运行更多的进程必须复用ASID，这个机制叫做ASID Recycling。在只有0号ASID的实现上每次切换进程都要把整个TLB刷新，相当于不断复用这一个ASID。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Rust/" rel="tag"># Rust</a>
+              <a href="/tags/RISC-V/" rel="tag"># RISC-V</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/04/14/OSCamp/OSCamp-D7-rCore-Chapter-2-3/" rel="prev" title="OSCamp D7-rCore Chapter 2&3">
+                  <i class="fa fa-angle-left"></i> OSCamp D7-rCore Chapter 2&3
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/" rel="next" title="OSCamp D9-rCore-Chapter 4-Code Comprehension">
+                  OSCamp D9-rCore-Chapter 4-Code Comprehension <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Qiu</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha256-UF1fgpAiu3tPJN/uCqEUHNe7pnr+QR0SQDNfgglgtcM=" crossorigin="anonymous">
+
+
+
+</body>
+</html>

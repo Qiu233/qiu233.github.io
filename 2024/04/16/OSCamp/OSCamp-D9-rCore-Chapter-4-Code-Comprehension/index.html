@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 7.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha256-dABdfBfUoC8vJUBOwGVdm8L9qlMWaHTIfXt+7GnZCIo=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"qiu233.github.io","root":"/","images":"/images","scheme":"Muse","darkmode":true,"version":"8.22.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"copycode":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="我花了一天多时间做了下面两张图，分别是地址空间一览和第四章内核态内存管理的层次结构一览。  第一节-地址空间关注第一张图，解释地址空间的分配。 第二节-内存管理利用第二张图解释第四章是如何实现内存管理的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OSCamp D9-rCore-Chapter 4-Code Comprehension">
+<meta property="og:url" content="https://qiu233.github.io/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/index.html">
+<meta property="og:site_name" content="Qiu的博客">
+<meta property="og:description" content="我花了一天多时间做了下面两张图，分别是地址空间一览和第四章内核态内存管理的层次结构一览。  第一节-地址空间关注第一张图，解释地址空间的分配。 第二节-内存管理利用第二张图解释第四章是如何实现内存管理的。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://qiu233.github.io/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/rcore-ch4-mm-spaces.png">
+<meta property="og:image" content="https://qiu233.github.io/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/rcore-ch4-mm-hierarchy.png">
+<meta property="article:published_time" content="2024-04-16T04:14:07.000Z">
+<meta property="article:modified_time" content="2025-03-05T14:25:42.364Z">
+<meta property="article:author" content="Qiu">
+<meta property="article:tag" content="Rust">
+<meta property="article:tag" content="RISC-V">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://qiu233.github.io/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/rcore-ch4-mm-spaces.png">
+
+
+<link rel="canonical" href="https://qiu233.github.io/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://qiu233.github.io/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/","path":"2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/","title":"OSCamp D9-rCore-Chapter 4-Code Comprehension"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>OSCamp D9-rCore-Chapter 4-Code Comprehension | Qiu的博客</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Qiu的博客</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4"><span class="nav-number">1.</span> <span class="nav-text"> 地址空间</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E5%88%87%E6%8D%A2"><span class="nav-number">1.1.</span> <span class="nav-text"> 地址空间切换</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E7%9A%84identity-mappings"><span class="nav-number">1.2.</span> <span class="nav-text"> 内核的Identity Mappings</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%89%B9%E6%AE%8A%E7%9A%84%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4"><span class="nav-number">1.3.</span> <span class="nav-text"> 特殊的地址空间</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text"> 内存管理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D"><span class="nav-number">2.1.</span> <span class="nav-text"> 内存分配</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%9B%9E%E6%94%B6"><span class="nav-number">2.2.</span> <span class="nav-text"> 内存回收</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Qiu</p>
+  <div class="site-description" itemprop="description">数学和编程</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">1</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://qiu233.github.io/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Qiu">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qiu的博客">
+      <meta itemprop="description" content="数学和编程">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="OSCamp D9-rCore-Chapter 4-Code Comprehension | Qiu的博客">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OSCamp D9-rCore-Chapter 4-Code Comprehension
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2024-04-16 12:14:07" itemprop="dateCreated datePublished" datetime="2024-04-16T12:14:07+08:00">2024-04-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-03-05 22:25:42" itemprop="dateModified" datetime="2025-03-05T22:25:42+08:00">2025-03-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/OSCamp/" itemprop="url" rel="index"><span itemprop="name">OSCamp</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>我花了一天多时间做了下面两张图，分别是<em>地址空间一览</em>和<em>第四章内核态内存管理的层次结构一览</em>。</p>
+<ul>
+<li><a href="#%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4">第一节-地址空间</a>关注第一张图，解释地址空间的分配。</li>
+<li><a href="#%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86">第二节-内存管理</a>利用第二张图解释第四章是如何实现内存管理的。</li>
+</ul>
+<img src="/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/rcore-ch4-mm-spaces.png" class="">
+<img src="/2024/04/16/OSCamp/OSCamp-D9-rCore-Chapter-4-Code-Comprehension/rcore-ch4-mm-hierarchy.png" class="">
+<span id="more"></span>
+<h1 id="地址空间"><a class="markdownIt-Anchor" href="#地址空间"></a> 地址空间</h1>
+<p>图中包括内核的地址空间和两个进程的地址空间。<strong>虚线表示地址相等，没有虚线的部分的宽度比例没有实际意义。</strong></p>
+<p>地址转换机制请见上一篇文章。</p>
+<h2 id="地址空间切换"><a class="markdownIt-Anchor" href="#地址空间切换"></a> 地址空间切换</h2>
+<p>虚拟地址空间到物理地址的映射由<code>MemorySet</code>决定，内核只有一个全局的实例<code>KERNEL_SPACE</code>，而每一个进程都有独特的<code>MemorySet</code>。用户程序切换到内核态时，在执行复杂代码前必须先转换地址空间。在回到用户态之前必须把地址空间转换回去。</p>
+<p>如图，包括内核和所有进程的虚拟地址空间的最后一个VP(虚拟页)被映射到<strong>同一个PP(物理页)</strong>：<strong>蹦床(Trampoline)</strong>，即<code>.text.trampoline</code>段中的<code>__alltraps</code>。</p>
+<p>图中内核的最后一个VP涂色和进程的不一样，原因是内核虽然这一段映射与进程相同，但内核态的trap处理程序会被切换成另一个函数。</p>
+<p>下面是第四章引入的新的trap跳转机制：</p>
+<ol>
+<li>用户态<code>stvec</code>保存了<code>TRAMPOLINE</code>，用户态发生trap时会跳转至该处。</li>
+<li>切换<code>sp</code>为<code>TRAP_CONTEXT_BASE</code>，在此处(<strong>右方</strong>)保存当前的上下文，不同进程的<code>TRAP_CONTEXT_BASE</code>映射到的物理页不同，所以上下文保存在各自的进程空间中。</li>
+<li>切换<code>satp</code>，<strong>进入内核空间</strong>。切换<code>sp</code>为内核栈。</li>
+<li>跳转执行处理trap的逻辑代码，该代码开始时会切换<code>stvec</code>为内核空间的trap处理程序。</li>
+<li>trap处理完成，<code>stvec</code>切回<code>TRAMPOLINE</code>，并跳转至<code>__restore</code>。</li>
+<li><code>satp</code>切回进程空间。<code>sp</code>切换为<code>TRAP_CONTEXT_BASE</code>，然后从该处恢复之前保存的信息。</li>
+<li><code>sp</code>切回保存的：trap前的栈顶。</li>
+<li><code>sret</code>返回用户态。</li>
+</ol>
+<h2 id="内核的identity-mappings"><a class="markdownIt-Anchor" href="#内核的identity-mappings"></a> 内核的Identity Mappings</h2>
+<p>Identity Mappings指的是直接把VP映射到相同的PP。注意到图中左上角的<code>Kernel Range</code>和<code>Physical Space Range</code>，它们是第四章唯二的Identity Mappings：</p>
+<ul>
+<li>Kernel Range：包含linker script中的所有段，也就是所有的内核代码、数据，请见<code>MemorySet::new_kernel</code>。</li>
+<li>Physical Space Range：从<code>ekernel</code>开始直到<code>0x88000000</code>的空间，可以被分配和管理的空间。</li>
+</ul>
+<h2 id="特殊的地址空间"><a class="markdownIt-Anchor" href="#特殊的地址空间"></a> 特殊的地址空间</h2>
+<p>注意图中天蓝色和灰色区域。</p>
+<ul>
+<li>灰色区域：没有映射到物理地址的虚拟地址空间，如果被访问将会触发著名的Segmentation Fault。</li>
+<li>标记为guard的灰色page的目的是防止栈越界访问到其他区域。</li>
+<li>天蓝色区域是Identity Mapping，整块由全局的<code>FRAME_ALLOCATOR</code>分配和回收，它分配的PP目前只有两种用途：<strong>内核栈和进程内存</strong>。</li>
+</ul>
+<p><strong>这里没有循环定义，因为Identity Mappings本身不会被<code>FRAME_ALLOCATOR</code>管理——它们的PP是直接由VP确定的。</strong></p>
+<p>进程空间的User Stack左侧有三块特殊的Area，对应ELF文件的类型为PT_LOAD的Program Headers，分别是：</p>
+<ol>
+<li>具有读取、执行权限的代码区域。</li>
+<li>具有读取权限的只读数据区域。</li>
+<li>具有读取、写入权限的数据区域，包括未初始化的bss段。</li>
+</ol>
+<p>这三块区域连同右侧的User Stack、倒数第二页的TRAP_CONTEXT，<strong>总计五块区域</strong>在程序正式执行前由操作系统分配固定大小的空间。</p>
+<p>另外两个则是：</p>
+<ul>
+<li>最后的TRAP_HANDLER：固定映射到同一个PP，前面已经说过，不再赘述。</li>
+<li>Heap：初始时<code>BRK</code>和<code>Heap Bottom</code>重合，因为大小为0。但是程序可以通过系统调用让OS分配更多内存，同时会将<code>BRK</code>右移，Heap扩大。</li>
+</ul>
+<h1 id="内存管理"><a class="markdownIt-Anchor" href="#内存管理"></a> 内存管理</h1>
+<p>从这里开始请关注第二张图。</p>
+<p>开始之前请读者确认这一点：</p>
+<blockquote>
+<p>因为内核的Heap实际上是一段分配在.bss上的全局数组<code>HEAP_SPACE</code>和对应的<code>HEAP_ALLOCATOR</code>，所以也包含在Kernel Range中了。</p>
+</blockquote>
+<p><strong>内存管理完全在内核空间中进行。</strong></p>
+<p>第四章的<code>TaskManager</code>有如下变化：</p>
+<ul>
+<li>将固定大小的<code>TaskControlBlock</code>(之后简称TCB)数组改为一个分配在Heap上的<code>Vec</code>。</li>
+<li><code>TCB</code>新增一些字段，其中最重要的是<code>memory_set: MemorySet</code>，决定进程的地址空间。</li>
+</ul>
+<p><code>MemorySet</code>表示一个完整的地址空间，每个进程都有独立的<code>MemorySet</code>，内核有唯一一个全局的<code>KERNEL_SPACE</code>。</p>
+<p>注意：进程的<code>MemorySet</code>对进程本身不可见，它分配在内核的Heap上，只对内核可见。内核管理进程的内存必须切换到内核态和内核空间中。</p>
+<ul>
+<li><code>MemorySet</code>持有一个<code>PageTable</code>，保存页表树节点的Frame都在此处。</li>
+<li>除此之外的，即最&quot;普通&quot;的Frame，在更下一层的结构<code>MapArea</code>中。</li>
+<li><strong>Identity Mappings没有Frame会被持有，因此也没有回收。</strong></li>
+</ul>
+<p><code>MemorySet</code>持有一个<code>MapArea</code>列表，一个<code>MapArea</code>表示地址空间中一段连续的、<strong>具有相同性质</strong>的多个VP。例如代码和数据就应当分属不同的<code>MapArea</code>，因为代码可执行，而数据一般不可执行。</p>
+<p><code>MapArea</code>的细节如图右下角所示，最重要的是Data Frames，它用一个分配在内核Heap上的<code>BTreeMap</code>保存了VPN到Frame的映射。</p>
+<h2 id="内存分配"><a class="markdownIt-Anchor" href="#内存分配"></a> 内存分配</h2>
+<p>内核启动后仅清理.bss和输出log信息后，立刻将<code>KERNEL_SPACE</code>初始化，并设置<code>satp</code>寄存器启用之。</p>
+<p>启动程序时(见<code>MemorySet::from_elf</code>和<code>TaskControlBlock::new</code>)：</p>
+<ol>
+<li>映射全局固定的<code>TRAMPOLINE</code></li>
+<li>解析ELF文件，为各个类型为<code>PT_LOAD</code>的Program Header分配内存，并加载到内存中</li>
+<li>分配栈空间(长度3页，分配2页)</li>
+<li>保留堆区域，初始时长度为0</li>
+<li>分配<code>TRAP_CONTEXT</code>空间，并映射于地址<code>TRAP_CONTEXT_BASE</code></li>
+<li>为进程分配内核栈，<strong>映射于内核空间中</strong></li>
+</ol>
+<p>过程还会解析程序入口点地址，程序启动跳转与前两章没多少区别。</p>
+<h2 id="内存回收"><a class="markdownIt-Anchor" href="#内存回收"></a> 内存回收</h2>
+<p>当进程结束时，内核空间中对应进程的整个<code>MemorySet</code>应当被销毁，此时它所有下级结构持有的Frame全部都会被<code>FRAME_ALLOCATOR</code>回收。</p>
+<p>此外，由于启动进程时还在内核空间中分配了进程的内核栈，进程结束时该空间也应当一并回收。</p>
+<p>但是我在原仓库没有找到任何有关程序结束内存回收的代码，可能是因为目前程序的执行数量和顺序都在编译期决定，不需要回收也不影响结果。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Rust/" rel="tag"># Rust</a>
+              <a href="/tags/RISC-V/" rel="tag"># RISC-V</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/04/15/OSCamp/OSCamp-D8-rCore-Chapter-4-Address-Translation/" rel="prev" title="OSCamp D8-rCore-Chapter 4-Address Translation">
+                  <i class="fa fa-angle-left"></i> OSCamp D8-rCore-Chapter 4-Address Translation
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/04/20/OSCamp/OSCamp-D13-rCore-Chapter-4-Lazy%E5%AE%9E%E7%8E%B0%E3%80%81mmap%E5%8F%8A%E6%94%B6%E5%B0%BE/" rel="next" title="OSCamp D13-rCore Chapter 4-Lazy实现、mmap及收尾">
+                  OSCamp D13-rCore Chapter 4-Lazy实现、mmap及收尾 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Qiu</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/sidebar.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+  
+
+  <script class="next-config" data-name="enableMath" type="application/json">true</script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha256-UF1fgpAiu3tPJN/uCqEUHNe7pnr+QR0SQDNfgglgtcM=" crossorigin="anonymous">
+
+
+
+</body>
+</html>
